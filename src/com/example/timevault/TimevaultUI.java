@@ -6,8 +6,8 @@ import com.vaadin.ui.*;
 public class TimevaultUI extends UI {
 	@Override
 	public void init(VaadinRequest request) {
-		Label label = new Label("Hello Vaadin user");
-		setContent(label);
+		MainUI mu = new MainUI();
+		setContent(mu);
 	}
 
 }

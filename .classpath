@@ -14,5 +14,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=TimeVault&amp;ivyXmlPath=ivy.xml&amp;confs=widgetset-compile&amp;ivySettingsPath=%24%7Bworkspace_loc%3ATimeVault%2Fivysettings.xml%7D&amp;loadSettingsOnDemand=false&amp;propertyFiles="/>
+	<classpathentry kind="lib" path="C:/Users/jlavador/oldcomputer/myproject/eclipse_vaadin_projects/TimeVault/lib/jxl-2.4.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/jlavador/oldcomputer/myproject/eclipse_vaadin_projects/TimeVault/lib/spring-vaadin-integration-1.6.5.jar"/>
 	<classpathentry kind="output" path="build/classes"/>
 </classpath>
