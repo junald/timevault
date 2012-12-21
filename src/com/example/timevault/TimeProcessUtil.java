@@ -20,61 +20,121 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.Vector;
+ 
 
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
 
 public class TimeProcessUtil {
-	private Map<String, Map<String, List<List<StaffData>>>> staffPunchesMonthMap = null;
+		private static Map<String, Map<String, Map<String, List<List<StaffData>>>>> _STORE = null;
+	private Map<String, Map<String, List<List<StaffData>>>> staffPunchesMonthMap = new HashMap<String, Map<String, List<List<StaffData>>>>();
 	private final static String path = "\\\\ws-phsvr01\\Public\\DailyTimeRecord\\";
 
 	private String source = null;
-	public String category;
+	public String department;
 	public String excelPath = null;
 
-	public TimeProcessUtil()
-	{
-		staffPunchesMonthMap = new HashMap<String, Map<String, List<List<StaffData>>>>();
+	static {
+		_STORE = new HashMap<String, Map<String, Map<String, List<List<StaffData>>>>>();
 	}
 
-	public void load(String source)
-	{
-		this.source = source;
-		try
-		{
-			String temp = category;
-			excelPath = path + "\\" + category + "\\" + temp.replace("-", "_") +".";
-			
-			InputStream is = new FileInputStream(path + "\\" + category + "\\" + temp.replace("-", "_")
-					+ "." + source + ".xls");
+	public TimeProcessUtil() {
 
-			init(is);
-		} catch (Exception ex)
-		{
-			// ex.printStackTrace();
+	}
+
+	protected void removeFromStore(String ip) {
+		try {
+			_STORE.remove(ip);
+		} catch (Exception e) {
+
+		}
+
+	}
+
+	protected Map<String, Map<String, List<List<StaffData>>>> getFromStore(
+			String ip) {
+		return _STORE.get(ip);
+	}
+
+	public void load(String ip, String department, String month, String year) {
+
+		removeFromStore(ip);
+		staffPunchesMonthMap = new HashMap<String, Map<String, List<List<StaffData>>>>();
+		month = getMonth(month);
+		System.out.println("LoadTimeEntries:load(" + ip + "," + department
+				+ "," + month + "," + year + ")");
+		try {
+			this.department = department;
+			for (int i = 1; i <= 31; i++) {
+				String day = String.valueOf(i);
+				String source = month + "." + day;
+
+				// First Check
+				if (!isExist(source, year,month)) {
+					if (day.length() == 1) {
+						source = month + "."
+								+ (day.length() == 1 ? "0" + day : day);
+
+						if (!isExist(source, year,month)) {
+
+						}
+						loadData(ip, source, month,year);
+					}
+				} else {
+					loadData(ip, source, month,year);
+				}
+			}
+
+		} catch (Exception e) {
+
 		}
 	}
 
-	
-	public boolean isExist(String source)
-	{
+	protected void loadData(String ip, String source, String month, String year) {
+		System.out.println("LoadTimeEntries:load(" + ip + "," + source + ","
+				+ year + ")");
+		this.source = source;
+		try {
+			String temp = department;
+			excelPath = path + "\\" + department + "\\"
+					+ temp.replace("-", "_") + "." + year + "\\"
+					+ temp.replace("-", "_") + "." + month+ "." +  year.substring(2,year.length()) + "\\"
+					+ temp.replace("-", "_") + ".";
+			String xlsPath = path + "\\" + department + "\\"
+					+ temp.replace("-", "_") + "." + year + "\\"
+					+ temp.replace("-", "_") + "." + month+ "." +  year.substring(2,year.length()) + "\\"
+					+ temp.replace("-", "_") + "." + source + ".xls";
 
-		String temp = category;
+			InputStream is = new FileInputStream(xlsPath);
+
+			init(ip, is);
+		} catch (Exception e) {
+			// e.printStackTrace();
+		}
+	}
+
+	public boolean isExist(String source, String year, String month) {
+
+		String temp = department;
 		// System.out.println("Source:" + path + "\\" + category + "\\"
 		// + temp.replace("-", "_") + "." + source + ".xls");
 
-		File file = new File(path + "\\" + category + "\\"
+		File file = new File(path + "\\" + department + "\\"
+				+ temp.replace("-", "_") + "." + year + "\\"
+				+ temp.replace("-", "_") + "." + month+ "." +  year.substring(2,year.length()) + "\\"
 				+ temp.replace("-", "_") + "." + source + ".xls");
-		return file.exists();
+
+		boolean trace = file.exists();
+		System.out.println("LoadTimeEntries:isExist():" + trace + "\tFile:"
+				+ file.getAbsolutePath());
+		return trace;
 
 	}
 
-	protected void init(InputStream is)
-	{
-		try
-		{
-
+	protected void init(String ip, InputStream is) {
+		try {
+			System.out.println("LoadTimeEntries:init()");
 			Workbook workbook = Workbook.getWorkbook(is);
 			Sheet sheet = workbook.getSheet(0);
 
@@ -84,10 +144,8 @@ public class TimeProcessUtil {
 			List<StaffData> detailsPunchesList = new ArrayList<StaffData>();
 			List<List<StaffData>> records = new ArrayList<List<StaffData>>();
 
-			for (int row = 5; row < sheet.getRows(); row++)
-			{
-				if (!sheet.getCell(1, row).getContents().trim().equals(""))
-				{
+			for (int row = 5; row < sheet.getRows(); row++) {
+				if (!sheet.getCell(1, row).getContents().trim().equals("")) {
 					StaffData staffData = new StaffData();
 					staffData.setCardNo(sheet.getCell(0, row).getContents());
 					staffData.setStaffName(sheet.getCell(1, row).getContents());
@@ -97,16 +155,13 @@ public class TimeProcessUtil {
 
 					DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-					try
-					{
+					try {
 
 						punchTime = punch.getContents();
 						Date in = df.parse(punchTime);
 
-					} catch (ParseException pe)
-					{
-						try
-						{
+					} catch (ParseException pe) {
+						try {
 							Calendar today = Calendar.getInstance();
 							StringTokenizer st = new StringTokenizer(source,
 									".");
@@ -134,8 +189,7 @@ public class TimeProcessUtil {
 							df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 							punchTime = df.format(d);
 
-						} catch (Exception e)
-						{
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
 
@@ -148,14 +202,12 @@ public class TimeProcessUtil {
 					staffData.setDirection(sheet.getCell(5, row).getContents());
 					detailsPunchesList.add(staffData);
 
-					if (staffName == null)
-					{
+					if (staffName == null) {
 						summaryPunchesList.add(staffData);
 						staffName = sheet.getCell(1, row).getContents();
 
 						if (!staffName.equals(sheet.getCell(1, row + 1)
-								.getContents().trim()))
-						{
+								.getContents().trim())) {
 							// summaryPunchesList.add(staffData);
 
 							records.add(summaryPunchesList);
@@ -168,11 +220,9 @@ public class TimeProcessUtil {
 							staffName = null;
 						}
 
-					} else
-					{
+					} else {
 						if (!staffName.equals(sheet.getCell(1, row + 1)
-								.getContents().trim()))
-						{
+								.getContents().trim())) {
 							summaryPunchesList.add(staffData);
 
 							records.add(summaryPunchesList);
@@ -189,69 +239,72 @@ public class TimeProcessUtil {
 			}
 
 			staffPunchesMonthMap.put(source, staffPunchesPerDayMap);
+
+			System.out.println("staffPunchesMonthMap:"
+					+ staffPunchesMonthMap.size());
+			System.out.println("staffPunchesPerDayMap:"
+					+ staffPunchesPerDayMap.size());
 			is.close();
 			workbook.close();
 
-		} catch (FileNotFoundException ffe)
-		{
-		} catch (Exception e)
-		{
+			_STORE.put(ip, staffPunchesMonthMap);
+
+		} catch (FileNotFoundException ffe) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 	}
 
 	@SuppressWarnings("unchecked")
-	public List<String> getStaffLists()
-	{
+	public List<String> getStaffLists(String ip) {
+		System.out.println("LoadTimeEntries:getStaffLists()");
 		List<String> staffLists = new ArrayList<String>();
 
-		Set keys = staffPunchesMonthMap.keySet();
-		for (Iterator i = keys.iterator(); i.hasNext();)
-		{
-			Map<String, List<List<StaffData>>> staffPunchesPerDayMap = staffPunchesMonthMap
-					.get((String) i.next());
-			Set keyStaff = staffPunchesPerDayMap.keySet();
-			for (Iterator j = keyStaff.iterator(); j.hasNext();)
-			{
-				String staff = (String) j.next();
-				if (staffLists.size() == 0)
-				{
-					staffLists.add(staff);
-				} else
-				{
-					boolean trace = false;
-					for (int k = 0; k < staffLists.size(); k++)
-					{
-						if (staff.equals(staffLists.get(k)))
-						{
-							trace = true;
+		staffPunchesMonthMap = _STORE.get(ip);
+		try {
+			Set keys = staffPunchesMonthMap.keySet();
+			for (Iterator i = keys.iterator(); i.hasNext();) {
+				Map<String, List<List<StaffData>>> staffPunchesPerDayMap = staffPunchesMonthMap
+						.get((String) i.next());
+				Set keyStaff = staffPunchesPerDayMap.keySet();
+				for (Iterator j = keyStaff.iterator(); j.hasNext();) {
+					String staff = (String) j.next();
+					if (staffLists.size() == 0) {
+						staffLists.add(staff);
+					} else {
+						boolean trace = false;
+						for (int k = 0; k < staffLists.size(); k++) {
+							if (staff.equals(staffLists.get(k))) {
+								trace = true;
+							}
+						}
+						if (!trace) {
+							staffLists.add(staff);
 						}
 					}
-					if (!trace)
-					{
-						staffLists.add(staff);
-					}
-				}
 
+				}
 			}
+			Collections.sort(staffLists);
+			System.out.println(staffLists);
+		} catch (Exception e) {
+
 		}
-		Collections.sort(staffLists);
 		return staffLists;
 	}
 
 	@SuppressWarnings("unchecked")
-	public Vector<StaffData> getStaffSummaryPunches(String staff)
-	{
-
+	public Vector<StaffData> getStaffSummaryPunches(String ip, String staff) {
+		System.out.println("LoadTimeEntries:getStaffSummaryPunches(" + staff
+				+ ")");
+		staffPunchesMonthMap = _STORE.get(ip);
 		datePunchesList = new ArrayList<String>();
 		Vector<StaffData> vStaff = new Vector<StaffData>();
 		Set keys = staffPunchesMonthMap.keySet();
 
-		for (Iterator i = keys.iterator(); i.hasNext();)
-		{
-			try
-			{
+		for (Iterator i = keys.iterator(); i.hasNext();) {
+			try {
 				String key = (String) i.next();
 				Map<String, List<List<StaffData>>> staffPunchesPerDayMap = staffPunchesMonthMap
 						.get(key);
@@ -260,17 +313,14 @@ public class TimeProcessUtil {
 				StaffData staffData = new StaffData();
 				staffData = punches.get(0);
 
-				try
-				{
+				try {
 					staffData.setPunchTime2(punches.get(1).getPunchTime());
-				} catch (IndexOutOfBoundsException iobe)
-				{
+				} catch (IndexOutOfBoundsException iobe) {
 					staffData.setPunchTime2("");
 				}
 				vStaff.add(staffData);
 				datePunchesList.add(staffData.getPunchTime().split(" ")[0]);
-			} catch (NullPointerException npe)
-			{
+			} catch (NullPointerException npe) {
 
 			}
 
@@ -283,29 +333,98 @@ public class TimeProcessUtil {
 
 	List<String> datePunchesList = new ArrayList<String>();
 
-	public List<String> getStaffSummaryDatePunches()
-	{
+	public List<String> getStaffSummaryDatePunches() {
+		System.out.println("LoadTimeEntries:getStaffSummaryDatePunches()");
 		return datePunchesList;
 
 	}
 
-	public List<StaffData> getStaffDetailsPunches(String staff, String month,
-			String day)
-	{
+	public List<StaffData> getStaffDetailsPunches(String ip, String staff,
+			String month, String day) {
 
+		month = getMonth(month);
+		System.out.println("LoadTimeEntries:getStaffDetailsPunches(" + staff
+				+ "," + month + "," + day + ")");
+
+		staffPunchesMonthMap = _STORE.get(ip);
 		List<StaffData> lStaff = new ArrayList<StaffData>();
+		Map<String, List<List<StaffData>>> staffPunchesPerDayMap = new HashMap<String, List<List<StaffData>>>();
+		try {
 
-		try
-		{
-			Map<String, List<List<StaffData>>> staffPunchesPerDayMap = staffPunchesMonthMap
-					.get(month + "." + day);
-
+			System.out.println("Details Punch:" + Integer.parseInt(month) + "."
+					+ day);
+			staffPunchesPerDayMap = staffPunchesMonthMap.get(Integer
+					.parseInt(month)
+					+ "." + day);
 			lStaff = staffPunchesPerDayMap.get(staff).get(1);
-		} catch (NullPointerException npe)
-		{
-
+		} catch (ArrayIndexOutOfBoundsException aiobe) {
+			aiobe.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+
+		System.out.println("Details Punch:" + Integer.parseInt(month) + "."
+				+ Integer.parseInt(day));
+
+		if (lStaff.size() == 0) {
+			staffPunchesPerDayMap = staffPunchesMonthMap.get(Integer
+					.parseInt(month)
+					+ "." + Integer.parseInt(day));
+			lStaff = staffPunchesPerDayMap.get(staff).get(1);
+		}
+
+		System.out.println("LoadTimeEntries:getStaffDetailsPunches():"
+				+ lStaff.size());
 		return lStaff;
+
+	}
+
+	protected String getMonth(String monthStr) {
+		String strVal = "";
+
+		if (monthStr.equalsIgnoreCase("January"))
+			strVal = "1";
+		if (monthStr.equalsIgnoreCase("February"))
+			strVal = "2";
+		if (monthStr.equalsIgnoreCase("March"))
+			strVal = "3";
+		if (monthStr.equalsIgnoreCase("April"))
+			strVal = "4";
+		if (monthStr.equalsIgnoreCase("May"))
+			strVal = "5";
+		if (monthStr.equalsIgnoreCase("June"))
+			strVal = "6";
+		if (monthStr.equalsIgnoreCase("July"))
+			strVal = "7";
+		if (monthStr.equalsIgnoreCase("August"))
+			strVal = "8";
+		if (monthStr.equalsIgnoreCase("September"))
+			strVal = "9";
+		if (monthStr.equalsIgnoreCase("October"))
+			strVal = "10";
+		if (monthStr.equalsIgnoreCase("November"))
+			strVal = "11";
+		if (monthStr.equalsIgnoreCase("December"))
+			strVal = "12";
+
+		return strVal;
+
 	}
 	
+	public static void main(String[] args){
+		TimeProcessUtil tpu = new TimeProcessUtil();
+		String ip="192.168.1.201";
+		tpu.load(ip, "Developer", "December", "2012");
+		for(String s: tpu.getStaffLists(ip)){
+			System.out.println(s);
+			Vector<StaffData> vs = tpu.getStaffSummaryPunches(ip,s);
+			System.out.println(s+"============");
+			for(StaffData sd : vs){
+				System.out.println("    " + sd.getCardNo() + " : " + sd.getStaffNo() + " : " + sd.getPunchTime());
+			}	
+			System.out.println(s+"============");
+		}
+		
+	}
 }
+
